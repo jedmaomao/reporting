@@ -9,23 +9,25 @@
     </head>
     <body ng-app="">
         <nav>
-            <div class="nav-wrapper header">
+            <div class="nav-wrapper margin-M-side">
                 <a href="/" class="brand-logo">DASHBOARD</a>
                 <ul id="nav-mobile" class="right hide-on-med-and-down">
-                <li><a href="/"><i class="material-icons">home</i></a></li>
+                <li><a href="/"><i class="material-icons prefix">account_circle</i></a></li>
                 </ul>
             </div>
         </nav>
-        <li class="search">
-            <div class="search-wrapper">
-                <input id="search" placeholder="Search"><i class="material-icons">search</i>
-                <div class="search-results"></div>
-            </div>
-        </li>
-        <div >
-        <p>Input something in the input box:</p>
-        <p>Name : <input type="text" ng-model="name" placeholder="Enter name here"></p>
-        <h1>Hello {{name}}</h1>
+        <div class="row margin-M-side">
+            <form class="col s12">
+                <div class="row">
+                    <div class="input-field col s1">
+                        <input id="icon_prefix" type="text" class="validate">
+                        <label for="icon_prefix">Library ID</label>
+                    </div>
+                    <div class="input-field col s2">
+                        <a class="waves-effect waves-light btn"><i class="material-icons right">search</i>SEARCH</a>
+                    </div>
+                </div>
+            </form>
         </div>
     </body>
 
