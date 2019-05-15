@@ -3,16 +3,25 @@
     <head>
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
         <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>           
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.0/jquery.min.js"></script> 
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+                
         <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.6.9/angular.min.js"></script>
+        <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.6.9/angular-route.js"></script>
         <link rel="stylesheet" href="./css/style.css">
     </head>
-    <body ng-app="">
+    <body ng-app="myApp" ng-controller="MainController" ng-cloak>
         <nav>
             <div class="nav-wrapper margin-M-side">
                 <a href="/" class="brand-logo">DASHBOARD</a>
                 <ul id="nav-mobile" class="right hide-on-med-and-down">
-                <li><a href="/"><i class="material-icons prefix">account_circle</i></a></li>
+                <li><a href="#!circulations">Circulations</a></li>
+                <li><a href="#!holds">Holds</a></li>
+                <li><a href="#!newTitles">New Titles</a></li>
+                <li><a href="#!expiringTitles">Expiring Titles</a></li>
+                <li><a href="#!patrons">Patrons</a></li>
+                <li><a href="#!help">Help</a></li>
+                <li><a href="#!"><i class="material-icons prefix">account_circle</i></a></li>
                 </ul>
             </div>
         </nav>
@@ -20,16 +29,239 @@
             <form class="col s12">
                 <div class="row">
                     <div class="input-field col s1">
-                        <input id="icon_prefix" type="text" class="validate">
+                        <input id="icon_prefix" type="text" class="validate" ng-model="libraryId">
                         <label for="icon_prefix">Library ID</label>
                     </div>
                     <div class="input-field col s2">
-                        <a class="waves-effect waves-light btn"><i class="material-icons right">search</i>SEARCH</a>
+                        <a class="waves-effect waves-light btn" ng-click="search()"><i class="material-icons right">search</i>SEARCH</a>
+                        
+                    </div>
+                </div>
+                <div class="red darken-1 col s2" ng-if="error" ng-cloak>
+                    <div class="white-text">
+                        {{error}}
                     </div>
                 </div>
             </form>
+            
         </div>
-    </body>
+       
+    <script src="https://code.highcharts.com/highcharts.js"></script>
+    <script src="https://code.highcharts.com/modules/series-label.js"></script>
+    <script src="https://code.highcharts.com/modules/exporting.js"></script>
+    <script src="https://code.highcharts.com/modules/export-data.js"></script>
+
+<div ng-view></div>
+
+<script>
+    var app = angular.module("myApp", ["ngRoute"]);
+    app.config(function($routeProvider) {
+        $routeProvider
+        .when("/", {
+            templateUrl : "circulations.htm",
+            controller: 'CirculationsController'
+        })
+        .when("/circulations", {
+            templateUrl : "circulations.htm",
+            controller: 'CirculationsController'
+        })
+        .when("/holds", {
+            templateUrl : "./holds.htm"
+        })
+        .when("/newTitles", {
+            templateUrl : "./newTitles.htm"
+        })
+        .when("/expiringTitles", {
+            templateUrl : "expiringTitles.htm"
+        })
+        .when("/patrons", {
+            templateUrl : "patrons.htm"
+        })
+        .when("/help", {
+            templateUrl : "help.htm"
+        });
+    });
+    app.controller('MainController',function($scope, $rootScope) {
+          $scope.search = function() {
+              if (!$scope.libraryId) {
+                  $scope.error = "Library ID is required."
+                  return;
+
+              }
+              $scope.libraryId = $scope.libraryId.trim();
+              if (!/^\d+$/.test($scope.libraryId)) {
+                  $scope.error = "Library ID is not valid."
+                  return;
+              }
+              $scope.error = "";
+              
+              $rootScope.libraryId = $scope.libraryId;
+              $rootScope.$emit("RunReport", {});
+              
+          }
+          $rootScope.mediaType = [
+              { token: 'eaudio', display: 'AUDIOBOOK'},
+              { token: 'emagazine', display: 'MAGAZINE',},
+              { token: 'ebook',  display: 'eBOOK'},
+              { token: 'comic', display: 'COMIC'},
+              { token: 'acorn', display: 'AUDIOBOOK'},
+              { token: 'indieflix', display: 'INDIEFLIX',},
+              { token: 'qello',  display: 'QELLO'},
+              { token: 'broadwayhd', display: 'BROADWAYHD'},
+              { token: 'artist works',  display: 'ARTIST WORKS'},
+              { token: 'pongalo', display: 'PONGALO'},
+              { token: 'atomic training',  display: 'ATOMIC TRAINING'},
+              { token: 'transparent language', display: 'TRANSPARENT LANGUAGE'},
+              { token: 'law depot',  display: 'LAW DEPOT'},
+              { token: 'one play', display: 'ONE PLAY'},
+              { token: 'hoonuit',  display: 'HOONUIT'},
+              { token: 'great courses', display: 'GREATE COURSES'},
+              { token: 'learnitlive',  display: 'LEARN IT LIVE'},
+              { token: 'methodtestprep', display: 'METHOD TEST PREP'}
+          ];
+    });
+    
+    app.controller('CirculationsController',function($scope, $rootScope,  $http, $timeout ) {
+        $scope.periods = [
+            {id: 1, name: "LAST 30 DAYS"},
+            {id: 2, name: "LAST 12 MONTHS"},
+        ];
+
+        $scope.data = {
+            categories: [],
+            series: [],
+            yValue: 1,
+            yTitle: "",
+            key: "DATE"
+        };
+
+        $scope.selectedPeriod = $scope.periods[0];
+        $scope.$watch("selectedPeriod", function(newVal, oldVal) {
+            if (newVal.id != oldVal.id) { 
+                $scope.data.yValue = newVal.id == 1 ? 1 : 100;
+                $scope.data.yTitle = newVal.id == 1 ? "" : "Hundred";
+                $scope.data.key = newVal.id == 1 ? "DATE" : "Month";
+                _reloadChart();
+                
+            }
+
+        });
+
+        function _load() {
+            return new Promise((resolve, reject) => {
+                $http.get(`/${$rootScope.libraryId}/circulations/${$scope.selectedPeriod.id}`).then(function(response) {
+                    resolve(response.data);
+                });
+            });   
+        }
+
+        $timeout(function(){
+            $('select').formSelect();
+        });
 
 
+        $rootScope.$on("RunReport", function(){
+            _reloadChart();
+        });
+
+        function _reloadChart() {
+            $scope.data.categories = [];
+            $scope.data.series = [];
+            $scope.isLoading = true;
+            _load().then(data => {
+                $scope.isLoading = false;
+                $scope.noData = false;
+                $scope.$apply();
+                if (data.length == 0) {
+                    $scope.noData = true;
+                    $scope.$apply();
+                    return;
+                }
+                data.forEach(item => {
+                    const token = item.Service.toLowerCase();
+                    const display = $rootScope.mediaType.find(m => m.token == token).display;
+                    if ($scope.data.series.filter(s => s.name == display).length == 0) {
+                        $scope.data.series.push({
+                            name: display,
+                            data: []
+                        });
+                    }
+                    if ($scope.data.categories.length == 0 || $scope.data.categories[0] != item[$scope.data.key]) {
+                        $scope.data.categories.unshift(item[$scope.data.key]);
+                    }
+                })
+
+                $scope.data.series.forEach(s => {
+                    s.data = new Array($scope.data.categories.length).fill(0);
+                    
+                })
+               
+                data.forEach((item) => {
+                    const token = item.Service.toLowerCase();
+                    const display = $rootScope.mediaType.find(m => m.token == token).display;
+                    $scope.data.series.forEach(s => {
+                        if (s.name == display) {
+                            s.data[$scope.data.categories.indexOf(item[$scope.data.key])] = item.Transactions;
+                        } 
+                    })
+                    })
+                _buildChart();
+            }).catch(err => {
+                $scope.isLoading = false;
+            });
+        }
+
+        
+        function _updateOptions() {
+            $scope.chartOptions = {
+                chart: {
+                    type: 'area'
+                },
+                title: {
+                    text: 'Circulations by Media Format'
+                },
+                xAxis: {
+                    categories: $scope.data.categories,
+                    tickmarkPlacement: 'on',
+                    title: {
+                        enabled: false
+                    }
+                },
+                yAxis: {
+                    title: {
+                        text: $scope.data.yTitle
+                    },
+                    labels: {
+                        formatter: function () {
+                            return this.value / $scope.data.yValue
+                        }
+                    }
+                },
+                tooltip: {
+                    split: true,
+                },
+                plotOptions: {
+                    area: {
+                        stacking: 'normal',
+                        lineColor: '#666666',
+                        lineWidth: 1,
+                        marker: {
+                            lineWidth: 1,
+                            lineColor: '#666666'
+                        }
+                    }
+                },
+                series: $scope.data.series
+            };
+        };
+
+        function _buildChart() {
+            _updateOptions();
+            Highcharts.chart('container', $scope.chartOptions);
+        }
+    });
+
+    
+</script> 
+</body>
 </html>
