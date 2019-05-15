@@ -141,6 +141,9 @@
                 $scope.data.yValue = newVal.id == 1 ? 1 : 100;
                 $scope.data.yTitle = newVal.id == 1 ? "" : "Hundred";
                 $scope.data.key = newVal.id == 1 ? "DATE" : "Month";
+                if (!/^\d+$/.test($rootScope.libraryId)) {
+                    return;
+                }
                 _reloadChart();
                 
             }
