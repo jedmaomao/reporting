@@ -144,12 +144,7 @@
             }
             _reloadCirculationChart();
 
-
-
         }
-
-
-       
 
         $scope.data = {
             categories: [],
@@ -238,6 +233,8 @@
                 _buildCirculationChart();
             }).catch(err => {
                 console.log(err);
+                $scope.showDropDown = false;
+                $scope.$apply();
                 $scope.isLoading = false;
             });
         }
@@ -348,7 +345,7 @@
                 $scope.isLoading = false;
                 $scope.noData = false;
                 $scope.$apply();
-                if (data.length < 2) {
+                if (data[0].data.length == 0 && data[1].data.length == 0) {
                     $scope.noData = true;
                     $scope.$apply();
                     return;
