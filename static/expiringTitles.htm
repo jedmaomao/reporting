@@ -1,9 +1,38 @@
-<div class="row margin-M-side">
+<div ng-controller="expiringTitlesController as ctr">
+  <div class="row margin-M-side" ng-if="noData" ng-cloak>
     <div class="col s12 m6">
-      <div class="card green darken-1">
+        <div class="card red darken-1">
         <div class="card-content white-text">
-          <span class="card-title">Coming soon</span>
+            <p>The library is not valid or there is no recent data available for this library.</p>
         </div>
+        </div>
+    </div>
+  </div>
+
+  <div class="row margin-M-side" ng-if="!noData" ng-cloak>
+    <div class="col s12 m6">
+      <table class="scroll-table">
+        <thead>
+          <tr>
+              <th>ISBN</th>
+              <th>Title</th>
+              <th>Expiration Date</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr ng-repeat="item in selectedData" >
+            <td>{{item.isbn}}</td>
+            <td>{{item.title}}</td>
+            <td>{{item.endon | date}}</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="center">
+        <label ng-repeat="item in types">
+          <input name="group1" type="radio" ng-change="ctr.select()" ng-model="ctr.selected" value='{{item.token}}'/>
+          <span>{{item.display}}</span>
+        </label>
       </div>
     </div>
   </div>
+</div>

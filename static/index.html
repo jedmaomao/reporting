@@ -69,10 +69,12 @@
             controller: 'CirculationsController'
         })
         .when("/holds", {
-            templateUrl : "./holds.htm"
+            templateUrl : "./holds.htm",
+            controller: 'holdsController'
         })
         .when("/newTitles", {
-            templateUrl : "./newTitles.htm"
+            templateUrl : "./newTitles.htm",
+            controller: 'newTitlesController'
         })
         .when("/expiringTitles", {
             templateUrl : "expiringTitles.htm"
@@ -80,6 +82,7 @@
         .when("/patrons", {
             templateUrl : "patrons.htm",
             controller: 'patronsController'
+            
         })
         .when("/help", {
             templateUrl : "help.htm"
@@ -133,6 +136,7 @@
             {id: 'last12Months', name: "LAST 12 MONTHS"},
         ];
 
+
         function _init() {
             const index = window.location.pathname.indexOf('/') + 1;
             const libraryId =  window.location.pathname.substring(index).trim();
@@ -154,12 +158,15 @@
             key: "DATE"
         };
 
-        $scope.selectedPeriod = $scope.periods[0];
-        $scope.$watch("selectedPeriod", function(newVal, oldVal) {
+        $scope.selectedPeriod = {
+           item : $scope.periods[0]
+        }
+        $scope.$watch("selectedPeriod.item", function(newVal, oldVal) {
             if (newVal.id != oldVal.id) { 
                 $scope.data.yValue = newVal.id == $scope.periods[0].id ? 1 : 1;
                 $scope.data.yTitle = newVal.id == $scope.periods[0].id ? "" : "";
                 $scope.data.key = newVal.id == $scope.periods[0].id ? "DATE" : "Month";
+                
                 if (!/^\d+$/.test($rootScope.libraryId)) {
                     return;
                 }
@@ -167,11 +174,11 @@
                 
             }
 
-        });
+        }, true);
 
         function _loadCirculation() {
             return new Promise((resolve, reject) => {
-                $http.get(`/${$rootScope.libraryId}/circulations/${$scope.selectedPeriod.id}`).then(function(response) {
+                $http.get(`/${$rootScope.libraryId}/circulations/${$scope.selectedPeriod.item.id}`).then(function(response) {
                     resolve(response.data);
                 }, function(error) {
                     reject(error);
@@ -459,7 +466,75 @@
         _init();
     });
 
-    
+
+    app.controller('expiringTitlesController',function($scope, $rootScope,  $http, $q) {
+        const ctr = this;
+        $scope.noData = false;
+        function _init() {
+            const index = window.location.pathname.indexOf('/') + 1;
+            const libraryId =  window.location.pathname.substring(index).trim();
+            if (!/^\d+$/.test(libraryId) && !/^\d+$/.test($rootScope.libraryId)) {
+                return;
+            }
+            if (/^\d+$/.test(libraryId)) {
+                $rootScope.libraryId = libraryId;
+            }
+            _reloadExpiringTitlesChart();
+
+        }
+
+        ctr.selected = '';
+        ctr.select = function() {
+            if (!ctr.selected) {
+                return;
+            }
+            $scope.selectedData = $scope.data.filter(m => m.servicetype == ctr.selected);
+        }
+
+        function _load() {
+            return new Promise((resolve, reject) => {
+                $http.get(`/${$rootScope.libraryId}/expireTitles`).then(function(response) {
+                    resolve(response.data);
+                }, function(error) {
+                    reject(error);
+                });
+            });   
+        }
+
+        $rootScope.$on("RunReport", function(){
+            _reloadExpiringTitlesChart();
+        });
+
+        function _reloadExpiringTitlesChart() {
+            $scope.isLoading = true;
+            _load().then(data => {
+                $scope.isLoading = false;
+                $scope.noData = false;
+                if (data.length == 0) {
+                    $scope.noData = true;
+                    $scope.$apply();
+                    return;
+                };
+               $scope.data = data;
+               $scope.selectedData = data;
+               ctr.select();
+               $scope.types = [];
+               data.forEach(item => {
+                   const type = $rootScope.mediaType.find(m => m.token == item.servicetype);
+                   if ($scope.types.filter(m => m.token == type.token).length == 0) {
+                      $scope.types.push(type);
+                   }   
+               });
+               $scope.$apply();
+            }).catch(err => {
+                console.log(err);
+                $scope.isLoading = false;
+                $scope.showTable = false;
+            });
+        }
+
+        _init();
+    });
 </script> 
 </body>
 </html>

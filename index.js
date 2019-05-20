@@ -10,7 +10,8 @@ app.get('/:id(\\d+)/', function (req, res) {
 });
 
 require('./routes/circulationsRoute')(app);
-require('./routes/patronCirculations')(app);
+require('./routes/patronRoute')(app);
+require('./routes/expiringTitlesRoute')(app)
 
 
 app.listen(3000, () => {

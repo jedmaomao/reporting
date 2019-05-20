@@ -5,3 +5,13 @@
 .margin-L-bottom {
     margin-bottom: 100px;
 }
+
+.scroll-table {
+    display: block;
+    max-height: 450px;
+    overflow-y: scroll;
+}
+
+*[ng-cloak] {
+    display: none;
+}
