@@ -1,9 +1,17 @@
-<div class="row margin-M-side">
-    <div class="col s12 m6">
-      <div class="card green darken-1">
-        <div class="card-content white-text">
-          <span class="card-title">Coming soon</span>
-        </div>
+<div class="row margin-M-side" ng-if="noData" ng-cloak>
+  <div class="col s12 m6">
+      <div class="card red darken-1">
+      <div class="card-content white-text">
+          <p>The library is not valid or there is no recent data available for this library.</p>
       </div>
-    </div>
+      </div>
   </div>
+</div>
+
+<div class="progress" ng-if="isLoading" ng-cloak>
+      <div class="indeterminate"></div>
+</div>
+
+<div id="activePatrons"></div> 
+
+<div id="newPatrons"></div> 

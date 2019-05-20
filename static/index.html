@@ -5,9 +5,12 @@
         <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
         <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.0/jquery.min.js"></script> 
         <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+
                 
         <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.6.9/angular.min.js"></script>
         <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.6.9/angular-route.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.11/lodash.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.24.0/moment.min.js"></script>
         <link rel="stylesheet" href="./css/style.css">
     </head>
     <body ng-app="myApp" ng-controller="MainController" ng-cloak>
@@ -30,7 +33,7 @@
                 <div class="row">
                     <div class="input-field col s1">
                         <input id="icon_prefix" type="text" class="validate" ng-model="libraryId">
-                        <label for="icon_prefix">Library ID</label>
+                        <!-- <label for="icon_prefix">Library ID</label> -->
                     </div>
                     <div class="input-field col s2">
                         <a class="waves-effect waves-light btn" ng-click="search()"><i class="material-icons right">search</i>SEARCH</a>
@@ -75,12 +78,14 @@
             templateUrl : "expiringTitles.htm"
         })
         .when("/patrons", {
-            templateUrl : "patrons.htm"
+            templateUrl : "patrons.htm",
+            controller: 'patronsController'
         })
         .when("/help", {
             templateUrl : "help.htm"
         });
     });
+
     app.controller('MainController',function($scope, $rootScope) {
           $scope.search = function() {
               if (!$scope.libraryId) {
@@ -121,11 +126,29 @@
           ];
     });
     
-    app.controller('CirculationsController',function($scope, $rootScope,  $http, $timeout ) {
+    app.controller('CirculationsController',function($scope, $rootScope,  $http, $timeout) {
         $scope.periods = [
-            {id: 1, name: "LAST 30 DAYS"},
-            {id: 2, name: "LAST 12 MONTHS"},
+            {id: 'last30Days', name: "LAST 30 DAYS"},
+            {id: 'last12Months', name: "LAST 12 MONTHS"},
         ];
+
+        function _init() {
+            const index = window.location.pathname.indexOf('/') + 1;
+            const libraryId =  window.location.pathname.substring(index).trim();
+            if (!/^\d+$/.test(libraryId) && !/^\d+$/.test($rootScope.libraryId)) {
+                return;
+            }
+            if (/^\d+$/.test(libraryId)) {
+                $rootScope.libraryId = libraryId;
+            }
+            _reloadCirculationChart();
+
+
+
+        }
+
+
+       
 
         $scope.data = {
             categories: [],
@@ -138,19 +161,19 @@
         $scope.selectedPeriod = $scope.periods[0];
         $scope.$watch("selectedPeriod", function(newVal, oldVal) {
             if (newVal.id != oldVal.id) { 
-                $scope.data.yValue = newVal.id == 1 ? 1 : 100;
-                $scope.data.yTitle = newVal.id == 1 ? "" : "Hundred";
-                $scope.data.key = newVal.id == 1 ? "DATE" : "Month";
+                $scope.data.yValue = newVal.id == $scope.periods[0].id ? 1 : 1;
+                $scope.data.yTitle = newVal.id == $scope.periods[0].id ? "" : "";
+                $scope.data.key = newVal.id == $scope.periods[0].id ? "DATE" : "Month";
                 if (!/^\d+$/.test($rootScope.libraryId)) {
                     return;
                 }
-                _reloadChart();
+                _reloadCirculationChart();
                 
             }
 
         });
 
-        function _load() {
+        function _loadCirculation() {
             return new Promise((resolve, reject) => {
                 $http.get(`/${$rootScope.libraryId}/circulations/${$scope.selectedPeriod.id}`).then(function(response) {
                     resolve(response.data);
@@ -166,14 +189,14 @@
 
 
         $rootScope.$on("RunReport", function(){
-            _reloadChart();
+            _reloadCirculationChart();
         });
 
-        function _reloadChart() {
+        function _reloadCirculationChart() {
             $scope.data.categories = [];
             $scope.data.series = [];
             $scope.isLoading = true;
-            _load().then(data => {
+            _loadCirculation().then(data => {
                 $scope.isLoading = false;
                 $scope.noData = false;
                 $scope.$apply();
@@ -209,8 +232,9 @@
                             s.data[$scope.data.categories.indexOf(item[$scope.data.key])] = item.Transactions;
                         } 
                     })
-                    })
-                _buildChart();
+                })
+                $scope.data.series.sort((a, b) => _.max(b.data) - _.max(a.data));
+                _buildCirculationChart();
             }).catch(err => {
                 console.log(err);
                 $scope.isLoading = false;
@@ -218,7 +242,7 @@
         }
 
         
-        function _updateOptions() {
+        function _updateCirculationOptions() {
             $scope.chartOptions = {
                 chart: {
                     type: 'area'
@@ -239,7 +263,7 @@
                     },
                     labels: {
                         formatter: function () {
-                            return this.value / $scope.data.yValue
+                            return this.value;
                         }
                     }
                 },
@@ -261,10 +285,180 @@
             };
         };
 
-        function _buildChart() {
-            _updateOptions();
-            Highcharts.chart('container', $scope.chartOptions);
+        function _buildCirculationChart() {
+            _updateCirculationOptions();
+            Highcharts.chart('circulations', $scope.chartOptions);
         }
+
+        function _buildTopCirculationChart() {
+            _updateOptions();
+        }
+        _init();
+    });
+
+    app.controller('patronsController',function($scope, $rootScope,  $http, $q) {
+        $scope.newData = {
+            categories: [],
+            series: []
+        };
+
+        function _init() {
+            const index = window.location.pathname.indexOf('/') + 1;
+            const libraryId =  window.location.pathname.substring(index).trim();
+            if (!/^\d+$/.test(libraryId) && !/^\d+$/.test($rootScope.libraryId)) {
+                return;
+            }
+            if (/^\d+$/.test(libraryId)) {
+                $rootScope.libraryId = libraryId;
+            }
+            _reloadPatronsChart();
+
+        }
+
+        $scope.activeData = {
+            categories: [],
+            series: []
+        };
+
+
+        function _load() {
+            return new Promise((resolve, reject) => {
+                const a = $http.get(`/${$rootScope.libraryId}/patrons/active`);
+                const b = $http.get(`/${$rootScope.libraryId}/patrons/new`);
+                $q.all([a, b]).then(function (result) {
+                    resolve(result);
+                }, function (error) {
+                    reject(error);
+                });
+            });   
+        }
+
+        $rootScope.$on("RunReport", function(){
+            _reloadPatronsChart();
+        });
+
+        function _reloadPatronsChart() {
+            $scope.newData.categories = [];
+            $scope.newData.series = [];
+            $scope.activeData.categories = [];
+            $scope.activeData.series = [];
+            $scope.isLoading = true;
+            _load().then(data => {
+                $scope.isLoading = false;
+                $scope.noData = false;
+                $scope.$apply();
+                if (data.length < 2) {
+                    $scope.noData = true;
+                    $scope.$apply();
+                    return;
+                };
+                $scope.newData.series.push({
+                    data : [],
+                    name: "New Patron"
+                });
+                $scope.activeData.series.push({
+                    data : [],
+                    name: "Active Patron",
+                    color: '#f7a35c'
+                });
+                data[0].data.forEach(item => {
+                    $scope.activeData.categories.unshift(moment().set({'year': item.year, 'month': parseInt(item.month) - 1}).format("MMMM, YYYY"));
+                    $scope.activeData.series[0].data.push(item.count);
+                });
+                data[1].data.forEach(item => {
+                    $scope.newData.categories.unshift(moment().set({'year': item.year, 'month': parseInt(item.month) - 1}).format("MMMM, YYYY"));
+                    $scope.newData.series[0].data.push(item.count);
+                });
+                _buildActivePatronsChart();
+                _buildNewPatronsChart();
+            }).catch(err => {
+                console.log(err);
+                $scope.isLoading = false;
+            });
+        }
+
+        
+        function _updateActivePatronsOptions() {
+            $scope.activePatronsChartOptions = {
+                title: {
+                    text: 'Active Patrons Per Month'
+                },
+                xAxis: {
+                    categories: $scope.activeData.categories,
+                    tickmarkPlacement: 'on',
+                    title: {
+                        enabled: false
+                    }
+                },
+                yAxis: {
+                    labels: {
+                        formatter: function () {
+                            return this.value;
+                        }
+                    }
+                },
+                tooltip: {
+                    split: false
+                },
+                plotOptions: {
+                    area: {
+                        stacking: 'normal',
+                        lineColor: '#666666',
+                        lineWidth: 1,
+                        marker: {
+                            lineWidth: 1,
+                            lineColor: '#666666'
+                        }
+                    }
+                },
+                series: $scope.activeData.series
+            };
+        };
+
+        function _updateNewPatronsOptions() {
+            $scope.newPatronsChartOptions = {
+                title: {
+                    text: 'New Patrons Per Month'
+                },
+                xAxis: {
+                    categories: $scope.newData.categories,
+
+                },
+                yAxis: {
+                    labels: {
+                        formatter: function () {
+                            return this.value;
+                        }
+                    }
+                },
+                tooltip: {
+                    split: false
+                },
+                plotOptions: {
+                    area: {
+                        stacking: 'normal',
+                        lineColor: '#666666',
+                        lineWidth: 1,
+                        marker: {
+                            lineWidth: 1,
+                            lineColor: '#666666'
+                        }
+                    }
+                },
+                series: $scope.newData.series
+            };
+        };
+
+        function _buildActivePatronsChart() {
+            _updateActivePatronsOptions();
+            Highcharts.chart('activePatrons', $scope.activePatronsChartOptions);
+        }
+
+        function _buildNewPatronsChart() {
+            _updateNewPatronsOptions();
+            Highcharts.chart('newPatrons', $scope.newPatronsChartOptions);
+        }
+        _init();
     });
 
     

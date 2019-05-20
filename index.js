@@ -10,6 +10,7 @@ app.get('/:id(\\d+)/', function (req, res) {
 });
 
 require('./routes/circulationsRoute')(app);
+require('./routes/patronCirculations')(app);
 
 
 app.listen(3000, () => {
