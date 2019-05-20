@@ -12,7 +12,8 @@ app.get('/:id(\\d+)/', function (req, res) {
 require('./routes/circulationsRoute')(app);
 require('./routes/patronRoute')(app);
 require('./routes/expiringTitlesRoute')(app)
-
+require('./routes/newTitlesRoute')(app)
+require('./routes/holdsRoute')(app)
 
 app.listen(3000, () => {
   console.log('Sever is up on port 3000.');

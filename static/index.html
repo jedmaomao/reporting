@@ -535,6 +535,144 @@
 
         _init();
     });
+
+    app.controller('newTitlesController',function($scope, $rootScope,  $http, $q) {
+        const ctr = this;
+        $scope.noData = false;
+        function _init() {
+            const index = window.location.pathname.indexOf('/') + 1;
+            const libraryId =  window.location.pathname.substring(index).trim();
+            if (!/^\d+$/.test(libraryId) && !/^\d+$/.test($rootScope.libraryId)) {
+                return;
+            }
+            if (/^\d+$/.test(libraryId)) {
+                $rootScope.libraryId = libraryId;
+            }
+            _reloadNewTitlesChart();
+
+        }
+
+        ctr.selected = '';
+        ctr.select = function() {
+            if (!ctr.selected) {
+                return;
+            }
+            $scope.selectedData = $scope.data.filter(m => m.servicetype == ctr.selected);
+        }
+
+        function _load() {
+            return new Promise((resolve, reject) => {
+                $http.get(`/${$rootScope.libraryId}/newTitles`).then(function(response) {
+                    resolve(response.data);
+                }, function(error) {
+                    reject(error);
+                });
+            });   
+        }
+
+        $rootScope.$on("RunReport", function(){
+            _reloadNewTitlesChart();
+        });
+
+        function _reloadNewTitlesChart() {
+            $scope.isLoading = true;
+            _load().then(data => {
+                $scope.isLoading = false;
+                $scope.noData = false;
+                if (data.length == 0) {
+                    $scope.noData = true;
+                    $scope.$apply();
+                    return;
+                };
+               $scope.data = data;
+               $scope.selectedData = data;
+               ctr.select();
+               $scope.types = [];
+               data.forEach(item => {
+                   const type = $rootScope.mediaType.find(m => m.token == item.servicetype);
+                   if ($scope.types.filter(m => m.token == type.token).length == 0) {
+                      $scope.types.push(type);
+                   }   
+               });
+               $scope.$apply();
+            }).catch(err => {
+                console.log(err);
+                $scope.isLoading = false;
+                $scope.showTable = false;
+            });
+        }
+
+        _init();
+    });
+
+    app.controller('holdsController',function($scope, $rootScope,  $http, $q) {
+        const ctr = this;
+        $scope.noData = false;
+        function _init() {
+            const index = window.location.pathname.indexOf('/') + 1;
+            const libraryId =  window.location.pathname.substring(index).trim();
+            if (!/^\d+$/.test(libraryId) && !/^\d+$/.test($rootScope.libraryId)) {
+                return;
+            }
+            if (/^\d+$/.test(libraryId)) {
+                $rootScope.libraryId = libraryId;
+            }
+            _reloadHoldsChart();
+
+        }
+
+        ctr.selected = '';
+        ctr.select = function() {
+            if (!ctr.selected) {
+                return;
+            }
+            $scope.selectedData = $scope.data.filter(m => m.servicetype == ctr.selected);
+        }
+
+        function _load() {
+            return new Promise((resolve, reject) => {
+                $http.get(`/${$rootScope.libraryId}/holds`).then(function(response) {
+                    resolve(response.data);
+                }, function(error) {
+                    reject(error);
+                });
+            });   
+        }
+
+        $rootScope.$on("RunReport", function(){
+            _reloadHoldsChart();
+        });
+
+        function _reloadHoldsChart() {
+            $scope.isLoading = true;
+            _load().then(data => {
+                $scope.isLoading = false;
+                $scope.noData = false;
+                if (data.length == 0) {
+                    $scope.noData = true;
+                    $scope.$apply();
+                    return;
+                };
+               $scope.data = data;
+               $scope.selectedData = data;
+               ctr.select();
+               $scope.types = [];
+               data.forEach(item => {
+                   const type = $rootScope.mediaType.find(m => m.token == item.servicetype);
+                   if ($scope.types.filter(m => m.token == type.token).length == 0) {
+                      $scope.types.push(type);
+                   }   
+               });
+               $scope.$apply();
+            }).catch(err => {
+                console.log(err);
+                $scope.isLoading = false;
+                $scope.showTable = false;
+            });
+        }
+
+        _init();
+    });
 </script> 
 </body>
 </html>
